@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f5f7fb">
-    <meta name="description" content="A private, browser-only USB file safety checker that flags common risky file types.">
+    <meta name="description" content="A private USB file checker with optional local Microsoft Defender drive scans on Windows.">
     <title>USB File Safety Checker</title>
     <style>
       :root {
@@ -43,6 +43,18 @@
       .notice-icon { flex: 0 0 auto; font-size: 16px; }
       .notice strong { color: #69430a; }
       .card { overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: white; box-shadow: 0 8px 30px #18264a08; }
+      .defender-card { margin-bottom: 17px; }
+      .defender-content { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 17px 20px; }
+      .defender-status { margin-top: 5px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+      .defender-status.error { color: var(--red); }
+      .defender-status.success { color: var(--green); }
+      .defender-actions { display: flex; align-items: center; flex: 0 0 auto; gap: 8px; }
+      .drive-select { min-width: 185px; min-height: 37px; padding: 0 10px; border: 1px solid #e1e5ee; border-radius: 8px; background: white; color: #46536b; font: inherit; font-size: 11px; }
+      .scan-result { margin: 0 20px 17px; padding: 11px 13px; border-radius: 9px; font-size: 11px; line-height: 1.55; }
+      .scan-result.clean { background: #eaf7f0; color: #246746; }
+      .scan-result.detected, .scan-result.error { background: #fff0ef; color: #a4303e; }
+      .scan-result.unverified { background: #fff7e7; color: #805313; }
+      .scan-result.hidden { display: none; }
       .card-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 18px 20px; border-bottom: 1px solid var(--line); }
       h2 { margin: 0; font-size: 15px; letter-spacing: -.2px; }
       .card-sub { margin-top: 4px; color: var(--muted); font-size: 11px; }
@@ -92,6 +104,10 @@
         header { margin-bottom: 31px; }
         .privacy { padding: 8px 9px; font-size: 9px; }
         .card-head { align-items: flex-start; padding: 15px; }
+        .defender-content { align-items: stretch; flex-direction: column; padding: 15px; }
+        .defender-actions { align-items: stretch; flex-direction: column; }
+        .drive-select { width: 100%; }
+        .scan-result { margin-right: 15px; margin-left: 15px; }
         .picker { min-height: 190px; margin: 13px; padding: 18px 11px; }
         .summary { gap: 7px; margin: 0 13px 13px; }
         .summary-item { padding: 10px; }
@@ -108,7 +124,7 @@
       <header>
         <div class="brand">
           <div class="brand-icon" aria-hidden="true">⌁</div>
-          <div><div class="brand-title">USB File Safety Checker</div><div class="brand-caption">Private, browser-only file review</div></div>
+          <div><div class="brand-title">USB File Safety Checker</div><div class="brand-caption">Local Defender scan & filename review</div></div>
         </div>
         <div class="privacy"><span class="privacy-dot" aria-hidden="true"></span>Files stay on your device</div>
       </header>
@@ -117,13 +133,33 @@
         <section class="intro">
           <div class="eyebrow">USB SAFETY TOOL</div>
           <h1>Review files before you open them.</h1>
-          <p>Select files or a folder from your USB drive to flag some common risky file types and deceptive filenames. This lightweight tool is <strong>not antivirus software</strong> and cannot confirm that files are safe.</p>
+          <p>Use Microsoft Defender below to scan a selected USB drive. You can also review filenames for some common risky extensions; that filename check does not scan for malware or confirm that files are safe.</p>
         </section>
 
         <aside class="notice" role="note">
           <span class="notice-icon" aria-hidden="true">⚠</span>
-          <span><strong>Important:</strong> This page only checks filenames and extensions in your browser. It does not read or upload file contents, scan for malware, or replace antivirus. A “No obvious flags” result does not mean a file is safe.</span>
+          <span><strong>Important:</strong> The filename check is only a basic warning. For a real scan, run this page through its local companion on Windows and use the Microsoft Defender section below. The public website alone cannot access your drives.</span>
         </aside>
+
+        <section class="card defender-card" aria-labelledby="defender-heading">
+          <div class="card-head">
+            <div><h2 id="defender-heading">Microsoft Defender drive scan</h2><div class="card-sub">Scans a selected local drive using the antivirus already on this PC.</div></div>
+            <span class="local-tag">WINDOWS ONLY · LOCAL</span>
+          </div>
+          <div class="defender-content">
+            <div>
+              <div><strong>Scan the USB drive</strong></div>
+              <div class="defender-status" id="defender-status" role="status" aria-live="polite">Checking for the local Windows Defender companion…</div>
+            </div>
+            <div class="defender-actions">
+              <select class="drive-select" id="drive-select" aria-label="Select USB drive" disabled>
+                <option value="">No drive selected</option>
+              </select>
+              <button class="button primary" id="scan-drive" type="button" disabled>Scan drive</button>
+            </div>
+          </div>
+          <div class="scan-result hidden" id="scan-result" role="status" aria-live="polite"></div>
+        </section>
 
         <section class="card" aria-labelledby="scan-heading">
           <div class="card-head">
@@ -168,7 +204,7 @@
           </div>
         </section>
 
-        <p class="footer-note"><strong>For an actual malware scan:</strong> use reputable, up-to-date antivirus software on your computer to scan the USB drive. This page is a static website; the browser limits what it can access, and it cannot scan the whole drive automatically.</p>
+        <p class="footer-note"><strong>Scan results:</strong> the local companion runs Microsoft Defender against the selected drive. The public website alone cannot access local drives. A scan result is not a guarantee of safety; review any detections in Windows Security.</p>
       </main>
     </div>
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
@@ -183,8 +219,11 @@
       const picker = document.getElementById('drop-zone');
       const fileInput = document.getElementById('file-input');
       const folderInput = document.getElementById('folder-input');
+      const driveSelect = document.getElementById('drive-select');
+      const scanButton = document.getElementById('scan-drive');
       let results = [];
       let toastTimer;
+      let defenderAvailable = false;
 
       function escapeHtml(value) {
         return String(value == null ? '' : value).replace(/[&<>"']/g, (char) => ({
@@ -241,6 +280,80 @@
         toast.className = `toast${isError ? ' error' : ''}`;
         window.clearTimeout(toastTimer);
         toastTimer = window.setTimeout(() => { toast.className = 'toast hidden'; }, 4000);
+      }
+
+      async function loadDefenderStatus() {
+        const status = document.getElementById('defender-status');
+        if (location.hostname !== '127.0.0.1' || location.port !== '8765') {
+          status.innerHTML = 'To use Defender, download the source from <a href="https://github.com/orensejethfrey-ops/usb-file-safety-checker" target="_blank" rel="noopener noreferrer">GitHub</a>, then run <code>start-scanner.bat</code>. The published website cannot scan your PC.';
+          return;
+        }
+
+        try {
+          const response = await fetch('/api/status', { cache: 'no-store' });
+          const data = await response.json();
+          if (!response.ok || !data.available) {
+            throw new Error(data.error || 'Microsoft Defender is unavailable.');
+          }
+          defenderAvailable = true;
+          const drives = Array.isArray(data.drives) ? data.drives : [];
+          driveSelect.innerHTML = '<option value="">Select a USB drive…</option>' +
+            drives.map((drive) =>
+              `<option value="${escapeHtml(drive.path)}">${escapeHtml(drive.path)} — ${escapeHtml(drive.label)}</option>`
+            ).join('');
+          if (!drives.length) {
+            status.textContent = 'Defender is ready. Insert your USB drive, then restart this local app to refresh its drive list.';
+            defenderAvailable = false;
+          } else {
+            const updated = data.signatureUpdated
+              ? ` Signatures last updated: ${new Date(data.signatureUpdated).toLocaleString()}.`
+              : '';
+            status.textContent = `Defender is ready. Select your USB drive; the Windows system drive is excluded.${updated}`;
+          }
+          driveSelect.disabled = !drives.length;
+          scanButton.disabled = !driveSelect.value;
+        } catch (error) {
+          status.textContent = error.message || 'Could not connect to the local Defender scanner.';
+          status.classList.add('error');
+        }
+      }
+
+      async function scanSelectedDrive() {
+        const drive = document.getElementById('drive-select').value;
+        const button = document.getElementById('scan-drive');
+        const result = document.getElementById('scan-result');
+        if (!defenderAvailable || !drive) return;
+        if (!window.confirm(
+          `Run Microsoft Defender on the entire ${drive} drive? This may take a while. The app will not automatically quarantine or remove detections.`
+        )) return;
+
+        button.disabled = true;
+        button.textContent = 'Scanning…';
+        result.className = 'scan-result';
+        result.textContent = `Microsoft Defender is scanning ${drive}. Keep this page open until the scan finishes.`;
+        try {
+          const response = await fetch('/api/scan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ drive })
+          });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || 'The Defender scan failed.');
+          result.className = `scan-result ${data.status}`;
+          result.textContent = data.message;
+          if (data.status === 'detected') {
+            result.textContent += ' Open Windows Security > Virus & threat protection > Protection history to review the detections.';
+          }
+          if (data.status === 'clean') {
+            result.textContent += ' This is not a guarantee that every threat will be detected.';
+          }
+        } catch (error) {
+          result.className = 'scan-result error';
+          result.textContent = error.message || 'The Defender scan failed.';
+        } finally {
+          button.disabled = !defenderAvailable || !driveSelect.value;
+          button.textContent = 'Scan drive';
+        }
       }
 
       function render() {
@@ -312,6 +425,12 @@
         link.remove();
         URL.revokeObjectURL(url);
       });
+
+      driveSelect.addEventListener('change', () => {
+        scanButton.disabled = !defenderAvailable || !driveSelect.value;
+      });
+      scanButton.addEventListener('click', scanSelectedDrive);
+      loadDefenderStatus();
 
       ['dragenter', 'dragover'].forEach((eventName) => {
         picker.addEventListener(eventName, (event) => {
